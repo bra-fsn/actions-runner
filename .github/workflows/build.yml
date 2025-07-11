@@ -62,11 +62,13 @@ jobs:
           # Update Dockerfile to use Ubuntu 9.0 (Noble)
           sed -i 's/8.0-jammy/9.0-noble/g' Dockerfile
           
-          # Build multi-architecture image
+          # Build multi-architecture image with caching
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --build-arg RUNNER_VERSION="${RUNNER_VERSION}" \
             --tag "${REGISTRY}/${IMAGE_NAME}:${RUNNER_VERSION}" \
             --tag "${REGISTRY}/${IMAGE_NAME}:latest" \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
             --push \
             .
