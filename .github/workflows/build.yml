@@ -62,13 +62,43 @@ jobs:
           # Update Dockerfile to use Ubuntu 9.0 (Noble)
           sed -i 's/8.0-jammy/9.0-noble/g' Dockerfile
           
-          # Build multi-architecture image with caching
+          # Build multi-architecture image with registry caching
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --build-arg RUNNER_VERSION="${RUNNER_VERSION}" \
             --tag "${REGISTRY}/${IMAGE_NAME}:${RUNNER_VERSION}" \
             --tag "${REGISTRY}/${IMAGE_NAME}:latest" \
-            --cache-from type=gha \
-            --cache-to type=gha,mode=max \
+            --cache-from type=registry,ref=${REGISTRY}/${IMAGE_NAME}:buildcache-amd64 \
+            --cache-from type=registry,ref=${REGISTRY}/${IMAGE_NAME}:buildcache-arm64 \
+            --push \
+            .
+
+      - name: Push amd64 buildcache
+        if: always()
+        run: |
+          RUNNER_VERSION=${{ needs.get-latest-runner-version.outputs.version }}
+          cd "runner-${RUNNER_VERSION}/images"
+          
+          docker buildx build \
+            --platform linux/amd64 \
+            --build-arg RUNNER_VERSION="${RUNNER_VERSION}" \
+            --tag "${REGISTRY}/${IMAGE_NAME}:${RUNNER_VERSION}-amd64" \
+            --cache-from type=registry,ref=${REGISTRY}/${IMAGE_NAME}:buildcache-amd64 \
+            --cache-to type=registry,ref=${REGISTRY}/${IMAGE_NAME}:buildcache-amd64,mode=max \
+            --push \
+            .
+
+      - name: Push arm64 buildcache
+        if: always()
+        run: |
+          RUNNER_VERSION=${{ needs.get-latest-runner-version.outputs.version }}
+          cd "runner-${RUNNER_VERSION}/images"
+          
+          docker buildx build \
+            --platform linux/arm64 \
+            --build-arg RUNNER_VERSION="${RUNNER_VERSION}" \
+            --tag "${REGISTRY}/${IMAGE_NAME}:${RUNNER_VERSION}-arm64" \
+            --cache-from type=registry,ref=${REGISTRY}/${IMAGE_NAME}:buildcache-arm64 \
+            --cache-to type=registry,ref=${REGISTRY}/${IMAGE_NAME}:buildcache-arm64,mode=max \
             --push \
             .
